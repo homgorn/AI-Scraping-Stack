@@ -1,82 +1,77 @@
-# USAGE.md — Полное руководство пользователя
+# USAGE.md — Complete User Guide
 
-## Быстрый старт
+## Quick Start
 
 ```bash
-# 1. Клонируй репо
-git clone <repo> && cd scrape-stack
+# 1. Clone the repo
+git clone https://github.com/homgorn/ai-scraping-stack.git && cd ai-scraping-stack
 
-# 2. Установка
-pip install "scrapling[ai,fetchers]" fastapi "uvicorn[standard]" \
-    httpx openai fastmcp python-dotenv pydantic pydantic-settings
-scrapling install        # браузеры для StealthyFetcher
+# 2. Install dependencies
+pip install -r requirements.txt
+scrapling install        # browsers for StealthyFetcher
 
-# 3. Конфиг
+# 3. Configure
 cp .env.example .env
-# Открой .env, добавь ключи (минимум — всё работает и без них)
+# Open .env, add your keys (minimum — works without them)
 
-# 4. Ollama (локальная LLM — опционально, но рекомендуется)
+# 4. Ollama (local LLM — optional but recommended)
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama pull llama3.2     # 2GB — базовая модель для анализа
+ollama pull llama3.2     # 2GB — base model for analysis
 
-# 5. Проверь систему
-python -m src.debug --full
+# 5. Check system health
+python debug.py --full
 
-# 6. Запусти API
+# 6. Start the API server
 uvicorn api:app --reload --port 8100
 
-# 7. Открой дашборд
-open index.html          # или просто в браузере
+# 7. Open the dashboard
+open landing.html        # or open in browser
 ```
 
 ---
 
-## Навигация по документу
+## Navigation
 
-1. [Конфигурация](#конфигурация)
-2. [Одиночный скрапинг](#одиночный-скрапинг)
-3. [Массовый скрапинг](#массовый-скрапинг)
-4. [Синтез сайта из URL](#синтез-сайта-из-url)
-5. [Скриншоты и визуальный анализ](#скриншоты-и-визуальный-анализ)
-6. [Управление моделями](#управление-моделями)
-7. [MCP для AI-агентов](#mcp-для-ai-агентов)
+1. [Configuration](#configuration)
+2. [Single URL Scraping](#single-url-scraping)
+3. [Bulk Scraping](#bulk-scraping)
+4. [Website Synthesis from URLs](#website-synthesis-from-urls)
+5. [Screenshots & Visual Analysis](#screenshots--visual-analysis)
+6. [Model Management](#model-management)
+7. [MCP for AI Agents](#mcp-for-ai-agents)
 8. [Python API](#python-api)
 9. [Docker](#docker)
-10. [Дебаггинг](#дебаггинг)
+10. [Debugging](#debugging)
 11. [FAQ](#faq)
 
 ---
 
-## Конфигурация
+## Configuration
 
-### Минимальный `.env` (всё работает без ключей)
+### Minimal `.env` (works without any keys)
 
 ```env
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=llama3.2
 ```
 
-### Рекомендуемый `.env`
+### Recommended `.env`
 
 ```env
-# Локальная LLM
+# Local LLM
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=llama3.2
 
-# OpenRouter — 300+ моделей, бесплатный тир
-# Получить: openrouter.ai/keys
+# OpenRouter — 300+ models, free tier available
+# Get key: openrouter.ai/keys
 OPENROUTER_API_KEY=sk-or-v1-...
 
-# HuggingFace — бесплатные inference providers (~200 req/day)
-# Получить: huggingface.co/settings/tokens
-HF_TOKEN=hf_...
-
-# Jina Reader — без ключа 20 RPM, с ключом — 10M токенов бесплатно
-# Получить: jina.ai
+# Jina Reader — without key: 20 RPM, with key: 10M free tokens
+# Get key: jina.ai
 JINA_API_KEY=jina_...
 ```
 
-### Все настройки через API (без перезапуска)
+### All settings configurable via API (no restart needed)
 
 ```bash
 curl -X PATCH http://localhost:8100/config \
@@ -86,16 +81,16 @@ curl -X PATCH http://localhost:8100/config \
 
 ---
 
-## Одиночный скрапинг
+## Single URL Scraping
 
-### Через дашборд (index.html)
+### Via Dashboard (landing.html)
 
-1. Открой `index.html` в браузере
-2. Введи URL в поле
-3. Выбери режим, задачу, сложность
-4. Нажми **Run Scrape**
+1. Open `landing.html` in your browser
+2. Enter the URL
+3. Select strategy, task, complexity
+4. Click **Analyze**
 
-### Через API
+### Via API
 
 ```bash
 curl -X POST http://localhost:8100/scrape \
@@ -108,55 +103,52 @@ curl -X POST http://localhost:8100/scrape \
   }'
 ```
 
-### Параметры scrape
+### Scrape Parameters
 
-| Параметр | Значения | По умолчанию | Описание |
-|----------|----------|-------------|----------|
-| `url` | URL | — | **Обязательный** |
-| `mode` | fast / stealth / dynamic | fast | Тип fetcher |
-| `strategy` | free / fast / smart / llm / ai / premium / stealth | smart | Провайдер |
-| `task` | см. ниже | summarize | Что делать с контентом |
-| `complexity` | low / medium / high | low | Выбор LLM |
-| `css_selector` | CSS | "" | Извлечь конкретные элементы |
-| `stream` | bool | false | SSE стриминг |
+| Parameter | Values | Default | Description |
+|-----------|--------|---------|-------------|
+| `url` | URL | — | **Required** |
+| `strategy` | free / fast / smart / llm / ai / premium / stealth | smart | Provider selection |
+| `task` | see below | summarize | What to do with content |
+| `complexity` | low / medium / high | low | LLM selection |
+| `css_selector` | CSS | "" | Extract specific elements |
 
-### Задачи (task)
+### Tasks
 
-| Task | Описание |
-|------|----------|
-| `summarize` | 3-5 предложений |
-| `extract_entities` | JSON: люди, организации, цены |
+| Task | Description |
+|------|-------------|
+| `summarize` | 3-5 sentence summary |
+| `extract_entities` | JSON: people, orgs, prices |
 | `classify` | news/product/blog/docs/ecommerce |
-| `extract_prices` | JSON: продукты, цены, наличие |
-| `sentiment` | JSON: тональность |
-| `extract_links` | JSON: все ссылки |
-| `translate_ru` | Перевод на русский |
-| `qa:What is the price?` | Вопрос к тексту |
-| `custom:List all emails` | Произвольная инструкция |
+| `extract_prices` | JSON: products, prices, availability |
+| `sentiment` | JSON: sentiment analysis |
+| `extract_links` | JSON: all links |
+| `qa:What is the price?` | Question answering |
+| `custom:List all emails` | Custom instruction |
 
-### Стратегии (strategy)
+### Strategies
 
-| Strategy | Провайдеры | Цена | Когда |
-|----------|-----------|------|-------|
-| `free` | Jina → Crawl4AI | $0 | Обычные сайты |
-| `fast` | Scrapling | $0 | Быстро, bulk |
-| `smart` | Jina→Scrapling→Crawl4AI→ScraperAPI | $0→$0.0005 | По умолчанию |
-| `llm` | Crawl4AI | $0 | Нужен чистый markdown для RAG |
-| `ai` | ScrapeGraphAI+Ollama | $0 | Prompt→JSON |
-| `stealth` | Scrapling StealthyFetcher | $0 | Cloudflare |
-| `premium` | Firecrawl | ~$0.002 | Лучшее качество |
+| Strategy | Providers | Cost | When to use |
+|----------|-----------|------|-------------|
+| `free` | Jina → Crawl4AI | $0 | Regular websites |
+| `fast` | Scrapling | $0 | Fast, bulk scraping |
+| `smart` | Jina → Scrapling → Crawl4AI → ScraperAPI | $0 → $0.0005 | Default, best balance |
+| `llm` | Crawl4AI | $0 | Clean markdown for RAG |
+| `ai` | ScrapeGraphAI + Ollama | $0 | Prompt → JSON extraction |
+| `stealth` | Scrapling StealthyFetcher | $0 | Cloudflare-protected sites |
+| `premium` | Firecrawl | ~$0.002 | Best quality markdown |
 
-### Сложность (complexity) → выбор LLM
+### Complexity → LLM Selection
 
 ```
-low    → Ollama llama3.2 (локально, бесплатно, приватно)
-medium → OpenRouter free (Qwen3 30B, Llama 3.3 70B)
-high   → OpenRouter настроенная модель (Claude, GPT-4o)
+low    → Ollama llama3.2 (local, free, private)
+medium → OpenRouter free tier (Qwen3 30B, Llama 3.3 70B)
+high   → OpenRouter configured model (Claude, GPT-4o)
 ```
 
 ---
 
-## Массовый скрапинг
+## Bulk Scraping
 
 ```bash
 curl -X POST http://localhost:8100/scrape/bulk \
@@ -173,24 +165,23 @@ curl -X POST http://localhost:8100/scrape/bulk \
   }'
 ```
 
-Возвращает: `{ results: [...], total: 3, success: 2, failed: 1 }`
+Returns: `{ results: [...], total: 3, success: 2, failed: 1 }`
 
 ---
 
-## Синтез сайта из URL
+## Website Synthesis from URLs
 
-Мощнейший режим: передаёшь 1–50 URL конкурентов → получаешь полный сайт.
+The most powerful feature: feed 1–50 competitor URLs → get a complete website.
 
-### Пайплайн
+### Pipeline
 
 ```
 Scrape N URLs → Extract patterns → Jina Search trends → Rank insights → Architect → Code
 ```
 
-### Через API
+### Via API
 
 ```bash
-# Один формат
 curl -X POST http://localhost:8100/synthesize \
   -H "Content-Type: application/json" \
   -d '{
@@ -206,23 +197,23 @@ curl -X POST http://localhost:8100/synthesize \
   }'
 ```
 
-### Форматы вывода
+### Output Formats
 
-| `output_format` | Что получишь |
-|----------------|-------------|
-| `html` | Готовый `<!DOCTYPE html>` файл, открываешь в браузере |
-| `react` | React компонент, вставляешь в Vite/CRA |
-| `fullstack_spec` | Markdown спек: BD schema, API, docker compose |
+| `output_format` | What you get |
+|-----------------|-------------|
+| `html` | Ready-to-use `<!DOCTYPE html>` file |
+| `react` | React component for Vite/CRA |
+| `fullstack_spec` | Markdown spec: DB schema, API, docker-compose |
 
-### Несколько вариантов
+### Multiple Variants
 
 ```bash
 curl -X POST http://localhost:8100/synthesize/multi \
   -d '{"urls": [...], "prompt": "...", "num_variants": 2}'
-# Возвращает html + react версии
+# Returns multiple versions (e.g., HTML + React)
 ```
 
-### Примеры хороших промптов
+### Good Prompt Examples
 
 ```
 "Create a dark-themed SaaS landing page for AI API platform.
@@ -241,20 +232,22 @@ CTA: 'Schedule Demo'."
 
 ---
 
-## Скриншоты и визуальный анализ
+## Screenshots & Visual Analysis
 
-### Скриншот одного URL
+### Single URL Screenshot
 
 ```bash
 curl -X POST http://localhost:8100/screenshot \
+  -H "Content-Type: application/json" \
   -d '{"url": "https://example.com", "full_page": true, "save": true}'
-# Возвращает: screenshot_b64 (PNG), provider, elapsed_ms
+# Returns: screenshot_b64 (PNG), provider, elapsed_ms
 ```
 
-### Полный аудит сайта (рекомендуется)
+### Full Site Audit (Recommended)
 
 ```bash
 curl -X POST http://localhost:8100/screenshot/audit \
+  -H "Content-Type: application/json" \
   -d '{
     "url": "https://competitor.com",
     "max_pages": 10,
@@ -263,13 +256,13 @@ curl -X POST http://localhost:8100/screenshot/audit \
   }'
 ```
 
-**Что происходит:**
-1. Парсится `robots.txt` + `sitemap.xml`
-2. Находятся ключевые страницы (`/about`, `/pricing`, `/features`, ...)
-3. Делаются скриншоты всех страниц параллельно (Crawl4AI)
-4. VLM анализирует каждый скриншот
+**What happens:**
+1. Parses `robots.txt` + `sitemap.xml`
+2. Discovers key pages (`/about`, `/pricing`, `/features`, ...)
+3. Takes screenshots of all pages in parallel (Crawl4AI)
+4. VLM analyzes each screenshot
 
-**Возвращает:**
+**Returns:**
 ```json
 {
   "key_pages_found": ["/about", "/pricing", "/features"],
@@ -281,10 +274,11 @@ curl -X POST http://localhost:8100/screenshot/audit \
 }
 ```
 
-### Bulk скриншоты + VLM
+### Bulk Screenshots + VLM Analysis
 
 ```bash
 curl -X POST http://localhost:8100/screenshot/bulk \
+  -H "Content-Type: application/json" \
   -d '{
     "urls": ["https://a.com", "https://b.com", "https://c.com"],
     "tasks": ["business_intel", "tech_stack"],
@@ -293,126 +287,104 @@ curl -X POST http://localhost:8100/screenshot/bulk \
   }'
 ```
 
-### VLM задачи для анализа скриншотов
+### VLM Tasks for Screenshot Analysis
 
-| Task | Возвращает | Для чего |
-|------|-----------|---------|
-| `business_intel` | JSON: company, audience, pricing | Исследование рынка |
-| `design_audit` | JSON: layout, colors, quality score | Дизайн-анализ |
-| `competitor_analysis` | JSON: USPs, segment, strengths | Конкурентный анализ |
-| `tech_stack` | JSON: framework, CMS, analytics | Технологии конкурента |
-| `ux_patterns` | JSON: nav, hero, CTA, social proof | Сбор паттернов |
-| `ocr_extract` | Весь текст с разметкой секций | Извлечение текста |
-| `summary` | 3-5 предложений | Быстрый обзор |
+| Task | Returns | Use Case |
+|------|---------|----------|
+| `business_intel` | JSON: company, audience, pricing | Market research |
+| `design_audit` | JSON: layout, colors, quality score | Design analysis |
+| `competitor_analysis` | JSON: USPs, segment, strengths | Competitive intelligence |
+| `tech_stack` | JSON: framework, CMS, analytics | Technology research |
+| `ux_patterns` | JSON: nav, hero, CTA, social proof | Pattern collection |
+| `summary` | 3-5 sentence description | Quick overview |
+| `custom` | Custom prompt response | Any analysis |
 
-### Ручной анализ скриншота
+### Manual Screenshot Analysis
 
 ```bash
-# Сначала скришот
-RESULT=$(curl -s -X POST http://localhost:8100/screenshot -d '{"url":"..."}')
+# Step 1: Take screenshot
+RESULT=$(curl -s -X POST http://localhost:8100/screenshot \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}')
 B64=$(echo $RESULT | python3 -c "import json,sys; print(json.load(sys.stdin)['screenshot_b64'])")
 
-# Потом VLM анализ
+# Step 2: VLM analysis
 curl -X POST http://localhost:8100/vision/analyze \
+  -H "Content-Type: application/json" \
   -d "{\"screenshot_b64\": \"$B64\", \"task\": \"competitor_analysis\"}"
 ```
 
-### Узнать структуру сайта (robots.txt + sitemap)
+### Discover Site Structure (robots.txt + sitemap)
 
 ```bash
 curl "http://localhost:8100/sitemap?url=https://example.com&max_urls=100"
-# Возвращает: sitemap_urls (все страницы), key_pages, disallowed
+# Returns: sitemap_urls (all pages), key_pages, disallowed
 ```
 
 ---
 
-## Управление моделями
+## Model Management
 
-### Ollama — локальные LLM
+### Ollama — Local LLM Models (Text)
 
 ```bash
-# Список установленных
-curl http://localhost:8100/models | python3 -c "import json,sys; [print(m['name']) for m in json.load(sys.stdin)['ollama']]"
+ollama pull llama3.2      # 2GB, fast, basic
+ollama pull mistral       # 4.1GB, good for extraction
+ollama pull qwen2.5       # 4.4GB, multilingual
+ollama pull deepseek-r1   # reasoning, complex tasks
+```
 
-# Установить новую модель (SSE stream)
+### Ollama — Vision Models (for Screenshots)
+
+```bash
+ollama pull qwen2.5vl:7b  # 4.7GB, best/compact
+ollama pull llava:7b      # 4.7GB, reliable classic
+ollama pull moondream     # 0.8GB, fast, runs on CPU
+```
+
+### List Installed Models
+
+```bash
+curl http://localhost:8100/models
+```
+
+### Pull New Model (SSE Stream)
+
+```bash
 curl -X POST http://localhost:8100/models/ollama/pull \
-  -d '{"model_name": "mistral"}' \
-  --no-buffer
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "mistral"}' --no-buffer
+```
 
-# Удалить
+### Delete Model
+
+```bash
 curl -X DELETE http://localhost:8100/models/ollama/mistral
 ```
 
-### Ollama — LLM модели (текст)
-```bash
-ollama pull llama3.2      # 2GB, быстрый, базовый
-ollama pull mistral       # 4.1GB, хороший для извлечения
-ollama pull qwen2.5       # 4.4GB, мультиязычный
-ollama pull deepseek-r1   # рассуждение, задачи
-```
-
-### Ollama — Vision модели (для скриншотов)
-```bash
-ollama pull qwen2.5vl:7b  # 4.7GB, лучший/компактный
-ollama pull llava:7b      # 4.7GB, надёжный классик
-ollama pull moondream     # 0.8GB, быстрый, CPU
-```
-
-### Установить VLM из HuggingFace GGUF
+### OpenRouter — Search & Add Models
 
 ```bash
-# Через API (SSE stream прогресса, авто-регистрация)
-curl -X POST http://localhost:8100/models/ollama/install-hf \
+# Search free models
+curl "http://localhost:8100/models/openrouter/search?free_only=true"
+
+# Add custom model
+curl -X POST http://localhost:8100/models/openrouter \
+  -H "Content-Type: application/json" \
   -d '{
-    "hf_repo": "Qwen/Qwen3-VL-30B-A3B-Instruct-GGUF",
-    "gguf_file": "qwen3vl-30b-a3b-instruct-q4_k_m.gguf",
-    "model_name": "qwen3-vl-30b"
-  }' --no-buffer
-
-# Или напрямую через ollama
-ollama pull hf.co/Qwen/Qwen3-VL-30B-A3B-Instruct-GGUF:qwen3vl-30b-a3b-instruct-q4_k_m.gguf
-```
-
-### OpenRouter — список и добавление
-
-```bash
-# Список всех бесплатных vision
-curl http://localhost:8100/models/vision
-
-# Добавить кастомную OR модель
-curl -X POST http://localhost:8100/models/vision/add \
-  -d '{
-    "id": "mistralai/pixtral-large-2411",
-    "name": "Pixtral Large",
-    "provider": "openrouter",
-    "free": false
-  }'
-
-# Обновить список бесплатных OR моделей (запроси live из API)
-curl -X POST http://localhost:8100/models/vision/refresh
-```
-
-### HuggingFace — поиск моделей
-
-```bash
-# Поиск VLM моделей на HuggingFace Hub
-curl "http://localhost:8100/models/hf/search?q=vision+language&limit=10"
-
-# Добавить HF модель в реестр
-curl -X POST http://localhost:8100/models/vision/add \
-  -d '{
-    "id": "Qwen/Qwen2.5-VL-7B-Instruct",
-    "hf_id": "Qwen/Qwen2.5-VL-7B-Instruct",
-    "name": "Qwen2.5-VL 7B HF",
-    "provider": "huggingface"
+    "model_id": "qwen/qwen3-30b-a3b:free",
+    "name": "Qwen3 30B",
+    "free": true,
+    "tier": "medium"
   }'
 ```
 
-### Добавить свой OpenAI-совместимый эндпоинт
+### Add Custom OpenAI-Compatible API
 
 ```bash
-# vLLM, llama.cpp server, LM Studio, Groq, Together, Perplexity...
+# Works with: vLLM, llama.cpp, LM Studio, Groq, Together, Perplexity...
 curl -X POST http://localhost:8100/models/api \
+  -H "Content-Type: application/json" \
   -d '{
     "name": "Groq",
     "base_url": "https://api.groq.com/openai/v1",
@@ -424,13 +396,13 @@ curl -X POST http://localhost:8100/models/api \
 
 ---
 
-## MCP для AI-агентов
+## MCP for AI Agents
 
-Подключи скрапер как инструмент к Claude Desktop, Cursor, Windsurf.
+Connect the scraper as a tool to Claude Desktop, Cursor, Windsurf.
 
 ### Claude Desktop
 
-Добавь в `~/.claude/mcp_config.json`:
+Add to `~/.claude/mcp_config.json`:
 
 ```json
 {
@@ -443,12 +415,12 @@ curl -X POST http://localhost:8100/models/api \
 }
 ```
 
-Перезапусти Claude Desktop. Появятся 6 инструментов:
-- `get` / `bulk_get` — быстрый fetch
-- `fetch` / `bulk_fetch` — с рендерингом JS
-- `stealthy_fetch` / `bulk_stealthy_fetch` — обход Cloudflare
+Restart Claude Desktop. 6 tools appear:
+- `get` / `bulk_get` — fast fetch
+- `fetch` / `bulk_fetch` — with JS rendering
+- `stealthy_fetch` / `bulk_stealthy_fetch` — Cloudflare bypass
 
-### Расширенный MCP (с Ollama + OpenRouter)
+### Extended MCP (with Ollama + OpenRouter)
 
 ```bash
 python stack.py serve
@@ -458,7 +430,7 @@ python stack.py serve
 
 ## Python API
 
-### Простой скрапинг
+### Simple Scraping
 
 ```python
 import asyncio
@@ -466,19 +438,19 @@ from providers import ProviderRouter
 
 async def main():
     router = ProviderRouter({
-        "jina_api_key": "jina_...",    # опционально
+        "jina_api_key": "jina_...",    # optional
     })
-    
-    # Одна страница
+
+    # Single page
     result = await router.scrape("https://example.com", strategy="smart")
-    print(result.markdown)   # LLM-ready текст
-    print(result.provider)   # кто обработал
-    print(result.cost_usd)   # стоимость
+    print(result.markdown)   # LLM-ready text
+    print(result.provider)   # which provider handled it
+    print(result.cost_usd)   # cost
 
 asyncio.run(main())
 ```
 
-### Анализ с LLM
+### LLM Analysis
 
 ```python
 from src.config import get_settings
@@ -492,12 +464,12 @@ result = await llm.analyze(
     task="extract_entities",
     complexity="low",         # low=Ollama, medium=OR free, high=OR paid
 )
-print(result.analysis)       # JSON строка
+print(result.analysis)       # analysis result
 print(result.model_used)     # "ollama/llama3.2"
-print(result.elapsed_ms)     # время в мс
+print(result.elapsed_ms)     # time in ms
 ```
 
-### Скриншоты
+### Screenshots & Vision
 
 ```python
 from src.screenshot import ScreenshotService, SiteMapService
@@ -510,22 +482,19 @@ sitemap = SiteMapService(cfg)
 registry = ModelRegistry()
 vision = VisionService(cfg, registry)
 
-# Обновить список бесплатных OR моделей
-await registry.fetch_live_or_vision_models(cfg.openrouter_api_key)
-
-# Узнать структуру сайта
+# Discover site structure
 site = await sitemap.discover("https://competitor.com")
-print(site.key_pages)    # ["/about", "/pricing", ...]
-print(len(site.sitemap_urls))  # сколько всего страниц
+print(site.key_pages)        # ["/about", "/pricing", ...]
+print(len(site.sitemap_urls))  # total pages found
 
-# Скриншот главной + ключевых страниц
+# Screenshot homepage + key pages
 shots = await screenshots.capture_many(
     [site.url] + site.key_pages[:9],
     max_concurrent=3,
     output_dir="data/screenshots",
 )
 
-# VLM анализ каждого
+# VLM analysis of each screenshot
 for shot in shots:
     if shot.screenshot_b64:
         result = await vision.analyze_screenshot(
@@ -537,7 +506,7 @@ for shot in shots:
         print(result.analysis)
 ```
 
-### Синтез сайта
+### Website Synthesis
 
 ```python
 from src.synthesizer import WebSynthesizer
@@ -554,11 +523,11 @@ result = await synth.run(
     ],
     prompt="Build SaaS landing page for developer tools. Dark theme.",
     output_format="html",         # html | react | fullstack_spec
-    research_trends=True,         # Jina Search для трендов
-    complexity="high",            # использовать лучшую LLM
+    research_trends=True,         # Jina Search for trends
+    complexity="high",            # use best LLM
 )
 
-# Сохрани готовый сайт
+# Save the generated site
 with open("output_site.html", "w") as f:
     f.write(result.code)
 
@@ -567,7 +536,7 @@ print("Trends:", result.trends[:3])
 print("Elapsed:", result.elapsed_ms, "ms")
 ```
 
-### История и статистика
+### History & Statistics
 
 ```python
 from src.storage import Storage
@@ -575,67 +544,67 @@ from src.storage import Storage
 storage = Storage(cfg)
 await storage.init()
 
-# Последние 50 scrapes
+# Last 50 scrapes
 history = await storage.get_history(limit=50)
 
-# Фильтр по URL
+# Filter by URL
 github = await storage.get_history(url_filter="github.com")
 
-# Статистика сессии
+# Session statistics
 stats = await storage.get_stats()
-print(f"Total: {stats['total']}, Cost: ${stats['total_cost_usd']:.4f}")
+print(f"Total: {stats.total_scrapes}, Cost: ${stats.total_cost_usd:.4f}")
 ```
 
 ---
 
 ## Docker
 
-### Запуск всего стека
+### Run Full Stack
 
 ```bash
 # API + Ollama
 docker compose up -d
 
-# Посмотреть логи
+# View logs
 docker compose logs -f api
 
-# Проверить статус
+# Check status
 curl http://localhost:8100/status
 ```
 
-### Загрузить модели в Docker Ollama
+### Pull Models in Docker Ollama
 
 ```bash
 docker compose exec ollama ollama pull llama3.2
 docker compose exec ollama ollama pull qwen2.5vl:7b
 ```
 
-### Остановить
+### Stop
 
 ```bash
 docker compose down
 ```
 
-Данные (SQLite, модели Ollama) персистентны через volumes.
+Data (SQLite, Ollama models) persists via volumes.
 
 ---
 
-## Дебаггинг
+## Debugging
 
-### Health check
+### Health Check
 
 ```bash
-# Быстрая проверка всех компонентов
-python -m src.debug
+# Quick check of all components
+python debug.py
 
-# С live тестом скрапинга
-python -m src.debug --full
+# With live scrape test
+python debug.py --full
 
-# Показать что не работает и как починить
-python -m src.debug --fix
+# Show what is broken and how to fix
+python debug.py --fix
 ```
 
-Пример вывода:
+Example output:
 ```
 ━━ Config ━━
   ✓ Config loads: .env parsed successfully
@@ -650,59 +619,57 @@ python -m src.debug --fix
     Fix: ollama pull qwen2.5vl:7b
 ```
 
-### Тесты
+### Tests
 
 ```bash
-# Все тесты
-python -m pytest tests/ -v
+# All tests
+pytest tests/ -v
 
-# Конкретный модуль
-python -m pytest tests/test_vision.py -v
-python -m pytest tests/test_storage.py -v
+# Specific module
+pytest tests/test_vision.py -v
+pytest tests/test_storage.py -v
+pytest tests/test_api.py -v
 
-# С покрытием
-python -m pytest tests/ --cov=src --cov=providers --cov-report=term-missing
-
-# Только быстрые (без async)
-python -m pytest tests/ -v -k "not asyncio"
+# With coverage
+pytest tests/ --cov=src --cov=providers --cov-report=term-missing
 ```
 
-### Частые проблемы
+### Common Issues
 
-**Ollama не отвечает**
+**Ollama not responding**
 ```bash
-ollama serve                    # запустить вручную
-curl http://localhost:11434/api/tags   # проверить
+ollama serve                    # start manually
+curl http://localhost:11434/api/tags   # verify
 ```
 
 **`ModuleNotFoundError: scrapling`**
 ```bash
 pip install "scrapling[ai,fetchers]"
-scrapling install               # браузеры
+scrapling install               # install browsers
 ```
 
-**Crawl4AI браузер не найден**
+**Crawl4AI browser not found**
 ```bash
 pip install crawl4ai
-crawl4ai-setup                  # загрузить Playwright браузеры
+crawl4ai-setup                  # download Playwright browsers
 ```
 
 **OpenRouter 401**
 ```bash
-# Проверь ключ
+# Verify key
 curl https://openrouter.ai/api/v1/models \
   -H "Authorization: Bearer sk-or-v1-..."
 ```
 
-**Скриншот не делается**
+**Screenshot fails**
 ```bash
-# Проверь Playwright
+# Check Playwright
 playwright install chromium
-# или Crawl4AI
+# or Crawl4AI
 crawl4ai-setup
 ```
 
-**`data/` директория не создаётся**
+**`data/` directory not created**
 ```bash
 mkdir -p data
 ```
@@ -711,29 +678,29 @@ mkdir -p data
 
 ## FAQ
 
-**Q: Можно ли скрапить без Ollama и OpenRouter?**
-A: Да. Jina Reader работает вообще без ключей. Скрапинг работает, анализ — нет.
+**Q: Can I scrape without Ollama and OpenRouter?**
+A: Yes. Jina Reader works without any keys. Scraping works, AI analysis does not.
 
-**Q: Сколько стоит 1000 страниц?**
-A: При стратегии `smart` — $0 (Jina + Scrapling). С ScraperAPI fallback — до $0.49.
+**Q: How much does 1000 pages cost?**
+A: With `smart` strategy — $0 (Jina + Scrapling). With ScraperAPI fallback — up to $0.49.
 
-**Q: Cloudflare блокирует?**
-A: Используй `mode=stealth` или `strategy=stealth`. Scrapling StealthyFetcher обходит CF Turnstile.
+**Q: Cloudflare blocking me?**
+A: Use `strategy=stealth`. Scrapling StealthyFetcher bypasses CF Turnstile automatically.
 
-**Q: Как получить LLM-ready markdown (для RAG)?**
-A: `strategy=llm` (Crawl4AI) или `strategy=free` (Jina Reader). Оба возвращают чистый markdown.
+**Q: How to get LLM-ready markdown (for RAG)?**
+A: `strategy=llm` (Crawl4AI) or `strategy=free` (Jina Reader). Both return clean markdown.
 
-**Q: Синтез занимает долго — как ускорить?**
-A: Уменьши `complexity=medium` (OR free вместо Claude). Меньше URL. Отключи `research_trends=false`.
+**Q: Synthesis takes too long — how to speed up?**
+A: Use `complexity=medium` (OR free instead of Claude). Fewer URLs. Disable `research_trends=false`.
 
-**Q: Как добавить новую vision модель вышедшую сегодня?**
-A: `POST /models/vision/refresh` — автообновление с OR API. Или `POST /models/vision/add` вручную.
+**Q: How to add a new vision model released today?**
+A: Add to `src/vision.py` OPENROUTER_FREE_VISION list, or via API if supported.
 
-**Q: Как использовать как библиотеку (без FastAPI)?**
-A: Импортируй напрямую: `from providers import ProviderRouter`, `from src.vision import VisionService` и т.д.
+**Q: How to use as a library (without FastAPI)?**
+A: Import directly: `from providers import ProviderRouter`, `from src.vision import VisionService`, etc.
 
-**Q: Где хранится история скрапинга?**
-A: `data/history.db` (SQLite). `GET /history` через API. `GET /stats` для статистики.
+**Q: Where is scrape history stored?**
+A: `data/scrapling.db` (SQLite). Access via `GET /history` or Python API.
 
-**Q: Как подключить Groq / Together / Perplexity?**
-A: `POST /models/api` с `base_url`, `api_key`, `models`. Все OpenAI-совместимые API работают.
+**Q: How to connect Groq / Together / Perplexity?**
+A: `POST /models/api` with `base_url`, `api_key`, `models`. Any OpenAI-compatible API works.
