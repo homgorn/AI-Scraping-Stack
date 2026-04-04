@@ -667,12 +667,22 @@
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-// Change this to your backend URL. Leave empty if same domain.
+// ⚠️ NEVER commit this file with real API_KEY values!
+// Set API_KEY only in your deployed version, not in the repo.
 const API_URL = 'https://ai-scraping-stack.onrender.com';
+const API_KEY = ''; // Set this in production, leave empty for local dev
 
-// Security: Set this to match the API_KEY in Render Environment Variables.
-// If empty, no key is sent (for local dev or unprotected servers).
-const API_KEY = '';
+// ── Analytics Placeholder ──────────────────────────────────────
+// Uncomment ONE of the following for privacy-friendly analytics:
+//
+// Plausible (recommended):
+// <script defer data-domain="your-domain.com" src="https://plausible.io/js/script.js"><\/script>
+//
+// Umami (self-hosted):
+// <script defer src="https://umami.your-domain.com/script.js" data-website-id="YOUR_UUID"><\/script>
+//
+// Google Analytics (not recommended for privacy):
+// <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"><\/script>
 
 // ── Helpers ──────────────────────────────────────────────────
 function resolveUrl(path) {

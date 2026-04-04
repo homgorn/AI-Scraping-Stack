@@ -696,10 +696,19 @@ async def search_openrouter_models(q: str = "", free_only: bool = False):
 
 @app.get("/history")
 async def get_history(limit: int = 50, offset: int = 0, url: str = ""):
+    # Enforce pagination limits
+    limit = min(limit, 200)  # Max 200 per request
+    offset = max(offset, 0)
     storage = _storage()
     await storage.init()
     entries = await storage.get_history(limit=limit, offset=offset, url_filter=url)
-    return {"entries": [e.model_dump() for e in entries], "total": len(entries)}
+    return {
+        "entries": [e.model_dump() for e in entries],
+        "total": len(entries),
+        "limit": limit,
+        "offset": offset,
+        "has_more": len(entries) == limit,
+    }
 
 
 @app.get("/stats")
@@ -712,7 +721,28 @@ async def get_stats():
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Graceful shutdown: close DB connections, clean up resources."""
+    import logging
+
+    logging.info("Shutting down AI Scraping Stack...")
+    # Clear rate limit store
+    _rate_limit_store.clear()
+    # Clear settings cache
+    get_settings.cache_clear()
+    logging.info("Shutdown complete.")
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("api:app", host="0.0.0.0", port=8100, reload=True)
+    uvicorn.run(
+        "api:app",
+        host="0.0.0.0",
+        port=8100,
+        reload=True,
+        log_level="info",
+        access_log=True,
+    )

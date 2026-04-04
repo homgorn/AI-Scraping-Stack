@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Disallow API endpoints from being indexed
+Disallow: /scrape
+Disallow: /synthesize
+Disallow: /screenshot
+Disallow: /vision
+Disallow: /models
+Disallow: /history
+Disallow: /stats
+Disallow: /config
+Disallow: /status
+
+# Allow documentation
+Allow: /docs/
+Allow: /landing.html
+Allow: /landing_ru.html
+
+Sitemap: https://ai-scraping-stack.com/sitemap.xml
