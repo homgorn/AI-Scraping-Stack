@@ -1,0 +1,20 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Runs every 10 minutes (Render free tier sleeps after 15 mins)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "Pinging ${{ secrets.RENDER_API_URL }}/status"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_API_URL }}/status)
+          echo "Response Code: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Warning: Backend returned status $RESPONSE"
+          fi
