@@ -92,15 +92,15 @@
 
 ## v0.4 — SEO Landing + Deploy ✅
 
-- ✅ `landing.html` — SEO-оптимизированный фронтенд (Schema.org, FAQ, Open Graph)
-- ✅ 5 вкладок: Scrape, Synthesize, Screenshot, Audit, Vision
-- ✅ Статический HTML — размещается на любом shared hosting
-- ✅ Связь с бэкендом через `API_URL` (fetch)
-- ✅ `DEPLOY_RAILWAY.md` — инструкция деплоя бэкенда на Railway
-- ✅ `DEPLOY_TIMEWEB.md` — инструкция деплоя на Timeweb Cloud (с GPU/Ollama)
-- ✅ `DEPLOY_SHARED_HOSTING.md` — инструкция деплоя фронтенда на виртуальный хостинг
-- ✅ Nginx конфиг для проксирования `/api/` → бэкенд
-- ✅ systemd сервис для автозапуска API
+- ✅ `landing.html` — SEO-optimized frontend (Schema.org, FAQ, Open Graph)
+- ✅ 5 tabs: Scrape, Synthesize, Screenshot, Audit, Vision
+- ✅ Static HTML — deployable on any shared hosting
+- ✅ Backend connection via `API_URL` (fetch)
+- ✅ `DEPLOY_RAILWAY.md` — Railway deployment guide
+- ✅ `DEPLOY_TIMEWEB.md` — Timeweb Cloud deployment (with GPU/Ollama)
+- ✅ `DEPLOY_SHARED_HOSTING.md` — Frontend deployment to shared hosting
+- ✅ Nginx config for `/api/` → backend proxy
+- ✅ systemd service for API auto-start
 - ✅ Dockerfile + docker-compose.yml
 - ✅ .gitignore
 - ✅ Makefile

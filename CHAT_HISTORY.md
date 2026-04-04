@@ -155,8 +155,12 @@ scrapling/
 - [x] Create integration tests ✅
 - [x] Create GitHub Actions CI ✅
 - [x] Update AGENT.md ✅
-- [ ] Add synthesis tab to index.html (landing.html already has it)
+- [x] Move all test files to tests/ directory ✅
+- [x] Git init + initial commit ✅
 - [ ] httpx connection pooling
+- [ ] Production CORS restrictions
+- [ ] Rate limiting
+- [ ] API key authentication
 - [ ] Production CORS restrictions
 - [ ] Rate limiting
 - [ ] API key authentication
@@ -220,4 +224,6 @@ scrapling/
 
 ---
 
-*Last updated: 2026-04-04 19:35*
+*Last updated: 2026-04-04 19:40*
+*Git commit: abe5a76 — Initial commit: AI Scraping Stack v0.4*
+*44 files, 9990 insertions*

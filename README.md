@@ -2,7 +2,7 @@
 
 > **6-layer intelligent web intelligence platform** — Scrape, Analyze, Synthesize, See.
 
-[🇬🇧 English](#english) | [🇷🇺 Русский](#русский) | [🇨🇳 中文](#中文) | [🇪🇸 Español](#español) | [🇫🇷 Français](#français)
+[🇬🇧 English](#english) | [🇷🇺 Русский](README_RU.md) | [🇨🇳 中文](#中文) | [🇪🇸 Español](#español) | [🇫🇷 Français](#français)
 
 ---
 
@@ -43,6 +43,8 @@ Output: screenshots + business analysis + design audit + generated website
 
 ```bash
 # 1. Install
+git clone https://github.com/homgorn/ai-scraping-stack.git
+cd ai-scraping-stack
 pip install -r requirements.txt
 scrapling install
 ollama pull llama3.2
@@ -53,7 +55,7 @@ cp .env.example .env
 
 # 3. Run
 uvicorn api:app --reload --port 8100
-# Open http://localhost:8100
+# Open landing.html in browser
 ```
 
 ### API Endpoints
@@ -91,62 +93,19 @@ uvicorn api:app --reload --port 8100
 
 ### Docs
 
+- [USAGE.md](USAGE.md) — Complete user guide (English)
+- [USAGE_RU.md](USAGE_RU.md) — Полное руководство (Русский)
 - [CONTEXT_MAP.md](CONTEXT_MAP.md) — Full system map
 - [AGENT.md](AGENT.md) — AI agent context
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
-- [USAGE.md](USAGE.md) — User guide
 - [skills/](skills/) — Automation playbooks
+- [DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md) — Deploy to Railway
+- [DEPLOY_TIMEWEB.md](DEPLOY_TIMEWEB.md) — Deploy to Timeweb Cloud
+- [DEPLOY_SHARED_HOSTING.md](DEPLOY_SHARED_HOSTING.md) — Deploy frontend to shared hosting
 
 ### License
 
 MIT
-
----
-
-## Русский
-
-### Что это?
-
-AI Scraping Stack превращает URL конкурентов в структурированную разведку и готовый код.
-
-```
-Вход: URL конкурентов
-Выход: скриншоты + бизнес-анализ + дизайн-аудит + сгенерированный сайт
-```
-
-### Быстрый старт
-
-```bash
-pip install -r requirements.txt
-scrapling install && ollama pull llama3.2
-cp .env.example .env
-uvicorn api:app --reload --port 8100
-```
-
-### Ключевые возможности
-
-- **10+ провайдеров** — Jina, Scrapling, Crawl4AI, ScraperAPI, Firecrawl и другие
-- **Каскадный fallback** — если один упал, следующий подхватывает
-- **Multi-Agent синтез** — 5 AI-агентов создают сайт из URL конкурентов
-- **Визуальный интеллект** — VLM анализирует скриншоты (бизнес, дизайн, конкуренты)
-- **Бесплатный режим** — Всё работает без затрат: Jina + Ollama + OpenRouter free
-- **MCP интеграция** — AI-агенты скрапят прямо из Claude/Cursor
-
-### Стратегии провайдеров
-
-| Стратегия | Провайдеры | Стоимость |
-|-----------|-----------|-----------|
-| `free` | Jina → Crawl4AI | $0 |
-| `smart` | Jina → Scrapling → Crawl4AI → ScraperAPI | $0→платно |
-| `stealth` | Scrapling Stealth → Scrapingdog → ScraperAPI | $0→платно |
-
-### Задачи Vision
-
-| Задача | Вывод | Применение |
-|--------|-------|------------|
-| `business_intel` | JSON: компания, аудитория, цены | Разведка конкурентов |
-| `design_audit` | UX анализ: иерархия, цвета | Вдохновение для дизайна |
-| `competitor_analysis` | JSON: УТП, ценовой сегмент | Анализ рынка |
 
 ---
 
