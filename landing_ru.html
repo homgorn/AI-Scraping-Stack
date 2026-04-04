@@ -670,6 +670,10 @@
 // Измените на URL вашего бэкенда. Оставьте пустым, если тот же домен.
 const API_URL = '';
 
+// Безопасность: Установите так же, как API_KEY в переменных Render.
+// Если пусто, ключ не отправляется (для локальной разработки).
+const API_KEY = '';
+
 // ── Helpers ──────────────────────────────────────────────────
 function resolveUrl(path) {
     const base = API_URL || window.location.origin;
@@ -678,9 +682,11 @@ function resolveUrl(path) {
 
 async function api(path, body) {
     const url = resolveUrl(path);
+    const headers = { 'Content-Type': 'application/json' };
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
     const opts = {
         method: body ? 'POST' : 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
     };
     if (body) opts.body = JSON.stringify(body);
     const r = await fetch(url, opts);

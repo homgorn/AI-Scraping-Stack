@@ -670,6 +670,10 @@
 // Change this to your backend URL. Leave empty if same domain.
 const API_URL = 'https://ai-scraping-stack.onrender.com';
 
+// Security: Set this to match the API_KEY in Render Environment Variables.
+// If empty, no key is sent (for local dev or unprotected servers).
+const API_KEY = '';
+
 // ── Helpers ──────────────────────────────────────────────────
 function resolveUrl(path) {
     const base = API_URL || window.location.origin;
@@ -678,9 +682,11 @@ function resolveUrl(path) {
 
 async function api(path, body) {
     const url = resolveUrl(path);
+    const headers = { 'Content-Type': 'application/json' };
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
     const opts = {
         method: body ? 'POST' : 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
     };
     if (body) opts.body = JSON.stringify(body);
     const r = await fetch(url, opts);

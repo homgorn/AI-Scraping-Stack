@@ -39,10 +39,43 @@ from datetime import datetime
 from typing import Any, AsyncGenerator, Literal, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+# ── Security Config ───────────────────────────────────────────────────────────
+API_KEY = os.getenv("API_KEY", "")  # If set, all POST requests require this key
+RATE_LIMIT = 10  # Max requests per minute per IP
+_rate_limit_store: dict[str, list[float]] = {}
+
+
+async def security_middleware(request: Request, call_next):
+    """Rate limiting + API Key protection."""
+    # Skip for GET/HEAD/OPTIONS
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+
+    # 1. Rate Limiting
+    if client_ip not in _rate_limit_store:
+        _rate_limit_store[client_ip] = []
+    # Remove old entries
+    _rate_limit_store[client_ip] = [t for t in _rate_limit_store[client_ip] if now - t < 60]
+    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT:
+        raise HTTPException(429, "Too many requests. Please wait a moment.")
+    _rate_limit_store[client_ip].append(now)
+
+    # 2. API Key Check (only if API_KEY env var is set)
+    if API_KEY:
+        auth = request.headers.get("X-API-Key", "")
+        if auth != API_KEY:
+            raise HTTPException(403, "Forbidden: Invalid API Key")
+
+    return await call_next(request)
+
 
 from src.config import get_settings
 from src.models import (
@@ -78,6 +111,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(security_middleware)
 
 # ── Service factories (lazy init) ─────────────────────────────────────────────
 
@@ -282,19 +316,13 @@ async def get_config():
     result = {
         "ollama_host": overrides.get("ollama_host", cfg.ollama_host),
         "default_ollama_model": overrides.get("default_ollama_model", cfg.ollama_model),
-        "default_openrouter_model": overrides.get(
-            "default_openrouter_model", cfg.openrouter_model
-        ),
+        "default_openrouter_model": overrides.get("default_openrouter_model", cfg.openrouter_model),
         "proxy": overrides.get("proxy", cfg.proxy_url),
         "max_concurrent": overrides.get("max_concurrent", cfg.max_concurrent),
-        "default_fetch_mode": overrides.get(
-            "default_fetch_mode", cfg.default_fetch_mode
-        ),
+        "default_fetch_mode": overrides.get("default_fetch_mode", cfg.default_fetch_mode),
     }
     if cfg.openrouter_api_key:
-        result["openrouter_api_key"] = (
-            cfg.openrouter_api_key[:8] + "..." + cfg.openrouter_api_key[-4:]
-        )
+        result["openrouter_api_key"] = cfg.openrouter_api_key[:8] + "..." + cfg.openrouter_api_key[-4:]
     return result
 
 
@@ -479,9 +507,7 @@ async def capture_screenshots_bulk(req: ScreenshotBulkRequest):
         if s.screenshot_b64 and not s.error and req.tasks:
             analyses = {}
             for task in req.tasks[:3]:
-                vr = await vision.analyze_screenshot(
-                    s.screenshot_b64, task=task, url=s.url
-                )
+                vr = await vision.analyze_screenshot(s.screenshot_b64, task=task, url=s.url)
                 analyses[task] = vr.analysis if not vr.error else f"Error: {vr.error}"
                 analyses[f"{task}_model"] = vr.model_used
             item["analyses"] = analyses
@@ -576,8 +602,7 @@ async def list_models():
         "ollama": ollama_models,
         "openrouter": OPENROUTER_BUILTIN_MODELS + reg.get("openrouter_models", []),
         "custom_apis": [
-            {"name": a["name"], "base_url": a["base_url"], "models": a["models"]}
-            for a in reg.get("custom_apis", [])
+            {"name": a["name"], "base_url": a["base_url"], "models": a["models"]} for a in reg.get("custom_apis", [])
         ],
         "defaults": {
             "ollama": get_settings().ollama_model,
@@ -614,9 +639,7 @@ async def delete_ollama_model(model_name: str):
     cfg = get_settings()
     try:
         async with httpx.AsyncClient(timeout=30) as c:
-            r = await c.delete(
-                f"{cfg.ollama_host}/api/delete", json={"name": model_name}
-            )
+            r = await c.delete(f"{cfg.ollama_host}/api/delete", json={"name": model_name})
             r.raise_for_status()
         return {"ok": True, "deleted": model_name}
     except Exception as e:
@@ -637,9 +660,7 @@ async def add_openrouter_model(body: OpenRouterModelRequest):
 @app.delete("/models/openrouter/{model_id:path}")
 async def remove_openrouter_model(model_id: str):
     reg = _load_registry()
-    reg["openrouter_models"] = [
-        m for m in reg.get("openrouter_models", []) if m.get("model_id") != model_id
-    ]
+    reg["openrouter_models"] = [m for m in reg.get("openrouter_models", []) if m.get("model_id") != model_id]
     _save_registry(reg)
     return {"ok": True}
 
@@ -655,9 +676,7 @@ async def add_custom_api(body: CustomApiRequest):
 @app.delete("/models/api/{api_name}")
 async def remove_custom_api(api_name: str):
     reg = _load_registry()
-    reg["custom_apis"] = [
-        a for a in reg.get("custom_apis", []) if a.get("name") != api_name
-    ]
+    reg["custom_apis"] = [a for a in reg.get("custom_apis", []) if a.get("name") != api_name]
     _save_registry(reg)
     return {"ok": True}
 
@@ -666,11 +685,7 @@ async def remove_custom_api(api_name: str):
 async def search_openrouter_models(q: str = "", free_only: bool = False):
     models = OPENROUTER_BUILTIN_MODELS
     if q:
-        models = [
-            m
-            for m in models
-            if q.lower() in m["id"].lower() or q.lower() in m["name"].lower()
-        ]
+        models = [m for m in models if q.lower() in m["id"].lower() or q.lower() in m["name"].lower()]
     if free_only:
         models = [m for m in models if m["free"]]
     return {"models": models}
