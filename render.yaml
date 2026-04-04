@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ai-scraping-stack
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      # Add your API keys here in the Render Dashboard or via secrets
+      # - key: OPENROUTER_API_KEY
+      #   sync: false
