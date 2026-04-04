@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Scraping Stack — Анализ конкурентов и генерация сайтов с помощью ИИ</title>
+    <meta name="description" content="AI Scraping Stack — платформа веб-разведки. Введите URL конкурента — получите скриншоты, бизнес-анализ, дизайн-аудит и готовый код сайта. 10+ провайдеров, мультискрапинг, VLM-анализ.">
+    <meta name="keywords" content="AI скрапинг, анализ конкурентов, генерация сайтов, веб-разведка, парсинг сайтов, визуальный аудит, искусственный интеллект, scraping, competitor analysis, AI website generator">
+    <meta name="author" content="AI Scraping Stack">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ai-scraping-stack.com/">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="AI Scraping Stack — Анализ конкурентов и генерация сайтов с ИИ">
+    <meta property="og:description" content="Введите URL конкурента — получите скриншоты, бизнес-анализ, дизайн-аудит и готовый код сайта. Бесплатно.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ai-scraping-stack.com/">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:site_name" content="AI Scraping Stack">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AI Scraping Stack — Анализ конкурентов с ИИ">
+    <meta name="twitter:description" content="Введите URL конкурента — получите полный анализ и готовый код сайта.">
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "AI Scraping Stack",
+        "description": "Платформа веб-разведки с ИИ: анализ конкурентов, генерация сайтов, визуальный аудит",
+        "url": "https://your-domain.com/",
+        "applicationCategory": "WebApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "AI скрапинг сайтов",
+            "Анализ конкурентов",
+            "Генерация сайтов из URL",
+            "Визуальный аудит с VLM",
+            "10+ провайдеров скрапинга",
+            "Мультискрапинг"
+        ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AI Scraping Stack",
+        "url": "https://ai-scraping-stack.com/",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://ai-scraping-stack.com/?url={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "Что такое AI Scraping Stack?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "AI Scraping Stack — это платформа веб-разведки, которая превращает URL конкурентов в структурированный интеллект: скриншоты, бизнес-анализ, дизайн-аудит и готовый код сайта."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Это бесплатно?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Да, базовый режим полностью бесплатный: Jina Reader (скрапинг), Ollama (локальный ИИ), OpenRouter free tier (облачные модели)."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Как работает генерация сайта из URL конкурентов?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Система анализирует 3-5 URL конкурентов через 5 AI-агентов (Extractor, Ranker, Researcher, Architect, Coder) и генерирует готовый HTML/React сайт на основе лучших практик."
+                }
+            }
+        ]
+    }
+    </script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a26;
+            --border: #2a2a3a;
+            --text: #e0e0e8;
+            --text-dim: #8888a0;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --green: #00b894;
+            --red: #e74c3c;
+            --orange: #f39c12;
+            --radius: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* ── Header ─────────────────────────────────────────── */
+        header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .logo span { color: var(--text-dim); font-weight: 400; font-size: 0.85rem; }
+        nav { display: flex; gap: 1.5rem; }
+        nav a { color: var(--text-dim); font-size: 0.9rem; transition: color 0.2s; }
+        nav a:hover { color: var(--text); text-decoration: none; }
+
+        /* ── Hero ───────────────────────────────────────────── */
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .hero h1 {
+            font-size: clamp(1.8rem, 5vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #a29bfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        /* ── Status ─────────────────────────────────────────── */
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            padding: 1rem;
+            flex-wrap: wrap;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+        .status-dot.off { background: var(--red); }
+
+        /* ── Main container ─────────────────────────────────── */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        /* ── Tabs ───────────────────────────────────────────── */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.95rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab-btn:hover { color: var(--text); }
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── Forms ──────────────────────────────────────────── */
+        .form-group { margin-bottom: 1rem; }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 0.3rem;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        textarea { min-height: 100px; resize: vertical; }
+        .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .row > * { flex: 1; min-width: 150px; }
+
+        .btn {
+            padding: 0.7rem 2rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        .btn:hover { background: #5a4bd1; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--border); }
+
+        /* ── Result ─────────────────────────────────────────── */
+        .result {
+            margin-top: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .result-header {
+            padding: 0.75rem 1rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        .result-body {
+            padding: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .result-body pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .result-body code {
+            background: var(--surface2);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-dim);
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error { color: var(--red); }
+        .success { color: var(--green); }
+
+        /* ── Screenshot preview ─────────────────────────────── */
+        .screenshot-preview {
+            max-width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin: 1rem 0;
+        }
+
+        /* ── Features section ───────────────────────────────── */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 4rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border);
+        }
+        .feature {
+            padding: 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .feature h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+        .feature p {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        /* ── FAQ ────────────────────────────────────────────── */
+        .faq {
+            margin-top: 4rem;
+            padding-top: 3rem;
+            border-top: 1px solid var(--border);
+        }
+        .faq h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        details {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+        summary {
+            padding: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        summary:hover { background: var(--surface2); }
+        details[open] summary { border-bottom: 1px solid var(--border); }
+        details p {
+            padding: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        /* ── Footer ─────────────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* ── Responsive ─────────────────────────────────────── */
+        @media (max-width: 600px) {
+            .hero { padding: 2rem 1rem 1rem; }
+            .container { padding: 0 1rem 2rem; }
+            header { padding: 0.75rem 1rem; }
+            .tabs { gap: 0; }
+            .tab-btn { padding: 0.6rem 1rem; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">AI Scraping Stack <span>v0.3.1</span></div>
+    <nav>
+        <a href="#tool">Инструмент</a>
+        <a href="#features">Возможности</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/your-org/ai-scraping-stack" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </nav>
+</header>
+
+<section class="hero">
+    <h1>Анализ конкурентов и генерация сайтов с помощью ИИ</h1>
+    <p>Введите URL — получите скриншоты, бизнес-анализ, дизайн-аудит и готовый код сайта. 10+ провайдеров скрапинга, мультискрапинг, VLM-анализ.</p>
+</section>
+
+<div class="status-bar" id="statusBar">
+    <div class="status-item"><span class="status-dot" id="dotApi"></span> API</div>
+    <div class="status-item"><span class="status-dot" id="dotOllama"></span> Ollama</div>
+    <div class="status-item"><span class="status-dot" id="dotOr"></span> OpenRouter</div>
+</div>
+
+<main class="container" id="tool">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="scrape">Скрапинг</button>
+        <button class="tab-btn" data-tab="synthesize">Синтез сайта</button>
+        <button class="tab-btn" data-tab="screenshot">Скриншот</button>
+        <button class="tab-btn" data-tab="audit">Визуальный аудит</button>
+        <button class="tab-btn" data-tab="vision">Анализ скриншота</button>
+    </div>
+
+    <!-- ── Tab: Scrape ──────────────────────────────────────── -->
+    <div class="tab-panel active" id="panel-scrape">
+        <div class="form-group">
+            <label for="scrapeUrl">URL (один на строку, до 50)</label>
+            <textarea id="scrapeUrl" placeholder="https://competitor1.com&#10;https://competitor2.com&#10;https://competitor3.com"></textarea>
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label for="scrapeStrategy">Стратегия</label>
+                <select id="scrapeStrategy">
+                    <option value="smart">Smart (каскад)</option>
+                    <option value="free">Free (бесплатно)</option>
+                    <option value="fast">Fast (быстро)</option>
+                    <option value="stealth">Stealth (Cloudflare)</option>
+                    <option value="premium">Premium (качество)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="scrapeTask">Задача ИИ</label>
+                <select id="scrapeTask">
+                    <option value="summarize">Саммари</option>
+                    <option value="extract_entities">Сущности</option>
+                    <option value="classify">Классификация</option>
+                    <option value="extract_prices">Цены</option>
+                    <option value="sentiment">Сентимент</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="scrapeComplexity">Сложность</label>
+                <select id="scrapeComplexity">
+                    <option value="low">Low (Ollama)</option>
+                    <option value="medium">Medium (OR free)</option>
+                    <option value="high">High (OR paid)</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn" onclick="doScrape()">Анализировать</button>
+        <div id="scrapeResult"></div>
+    </div>
+
+    <!-- ── Tab: Synthesize ──────────────────────────────────── -->
+    <div class="tab-panel" id="panel-synthesize">
+        <div class="form-group">
+            <label for="synthUrls">URL конкурентов (1-50, по одному на строку)</label>
+            <textarea id="synthUrls" placeholder="https://competitor1.com&#10;https://competitor2.com&#10;https://competitor3.com"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="synthPrompt">Описание сайта</label>
+            <textarea id="synthPrompt" placeholder="Создай лендинг для SaaS-продукта. Тёмная тема, современный дизайн. Секции: Hero, Features, Pricing, CTA"></textarea>
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label for="synthFormat">Формат</label>
+                <select id="synthFormat">
+                    <option value="html">HTML</option>
+                    <option value="react">React</option>
+                    <option value="fullstack_spec">Full-stack spec</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="synthComplexity">Сложность</label>
+                <select id="synthComplexity">
+                    <option value="high">High (лучшее качество)</option>
+                    <option value="medium">Medium (OR free)</option>
+                    <option value="low">Low (Ollama)</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn" onclick="doSynthesize()">Сгенерировать сайт</button>
+        <div id="synthResult"></div>
+    </div>
+
+    <!-- ── Tab: Screenshot ──────────────────────────────────── -->
+    <div class="tab-panel" id="panel-screenshot">
+        <div class="form-group">
+            <label for="shotUrl">URL</label>
+            <input type="url" id="shotUrl" placeholder="https://example.com">
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label for="shotWidth">Ширина</label>
+                <input type="number" id="shotWidth" value="1440">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="shotFullPage" checked> Полная страница
+                </label>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="shotPdf"> PDF
+                </label>
+            </div>
+        </div>
+        <button class="btn" onclick="doScreenshot()">Скриншот</button>
+        <div id="shotResult"></div>
+    </div>
+
+    <!-- ── Tab: Audit ───────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-audit">
+        <div class="form-group">
+            <label for="auditUrl">URL сайта для аудита</label>
+            <input type="url" id="auditUrl" placeholder="https://competitor.com">
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label for="auditPages">Макс. страниц</label>
+                <input type="number" id="auditPages" value="10" min="1" max="15">
+            </div>
+            <div class="form-group">
+                <label for="auditTasks">Задачи VLM</label>
+                <select id="auditTasks" multiple size="3">
+                    <option value="business_intel" selected>Бизнес-анализ</option>
+                    <option value="design_audit" selected>Дизайн-аудит</option>
+                    <option value="ux_patterns">UX паттерны</option>
+                    <option value="competitor_analysis">Анализ конкурента</option>
+                    <option value="tech_stack">Технологии</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn" onclick="doAudit()">Полный аудит</button>
+        <div id="auditResult"></div>
+    </div>
+
+    <!-- ── Tab: Vision ──────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-vision">
+        <div class="form-group">
+            <label for="visionB64">Base64 скриншота (PNG)</label>
+            <textarea id="visionB64" placeholder="iVBORw0KGgoAAAANSUhEUgAA..."></textarea>
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label for="visionTask">Задача</label>
+                <select id="visionTask">
+                    <option value="business_intel">Бизнес-анализ</option>
+                    <option value="design_audit">Дизайн-аудит</option>
+                    <option value="competitor_analysis">Анализ конкурента</option>
+                    <option value="tech_stack">Технологии</option>
+                    <option value="ux_patterns">UX паттерны</option>
+                    <option value="content_extract">Извлечение контента</option>
+                    <option value="summary">Саммари</option>
+                    <option value="custom">Свой промпт</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="visionPrompt">Свой промпт (для custom)</label>
+                <input type="text" id="visionPrompt" placeholder="Опишите что анализировать">
+            </div>
+        </div>
+        <button class="btn" onclick="doVision()">Анализировать</button>
+        <div id="visionResult"></div>
+    </div>
+
+    <!-- ── Features ─────────────────────────────────────────── -->
+    <section class="features" id="features">
+        <article class="feature">
+            <h3>10+ провайдеров скрапинга</h3>
+            <p>Jina Reader, Scrapling, Crawl4AI, ScraperAPI, Firecrawl, ZenRows, Scrapingdog, ScrapeGraphAI — каскадный fallback от бесплатных к платным.</p>
+        </article>
+        <article class="feature">
+            <h3>Мультискрапинг</h3>
+            <p>Скрапьте до 50 URL параллельно с контролем конкурентности. Каждый результат анализируется ИИ автоматически.</p>
+        </article>
+        <article class="feature">
+            <h3>Генерация сайтов из URL</h3>
+            <p>5 AI-агентов (Extractor → Ranker → Researcher → Architect → Coder) создают готовый HTML/React сайт на основе анализа конкурентов.</p>
+        </article>
+        <article class="feature">
+            <h3>Визуальный аудит</h3>
+            <p>Автоматическое обнаружение sitemap → скриншоты всех ключевых страниц → VLM-анализ (бизнес, дизайн, UX, технологии).</p>
+        </article>
+        <article class="feature">
+            <h3>Бесплатный режим</h3>
+            <p>Всё работает без затрат: Jina Reader (скрапинг), Ollama (локальный ИИ), OpenRouter free tier (облачные модели).</p>
+        </article>
+        <article class="feature">
+            <h3>MCP для AI-агентов</h3>
+            <p>Интеграция с Claude Desktop и Cursor — скрапьте сайты прямо из чата через Model Context Protocol.</p>
+        </article>
+    </section>
+
+    <!-- ── FAQ ──────────────────────────────────────────────── -->
+    <section class="faq" id="faq">
+        <h2>Частые вопросы</h2>
+        <details>
+            <summary>Что такое AI Scraping Stack?</summary>
+            <p>Это платформа веб-разведки с ИИ, которая превращает URL конкурентов в структурированный интеллект: скриншоты, бизнес-анализ, дизайн-аудит и готовый код сайта.</p>
+        </details>
+        <details>
+            <summary>Это бесплатно?</summary>
+            <p>Да, базовый режим полностью бесплатный. Jina Reader работает без ключа, Ollama — локальный ИИ, OpenRouter имеет free tier моделей.</p>
+        </details>
+        <details>
+            <summary>Как работает генерация сайта?</summary>
+            <p>Система анализирует 3-5 URL конкурентов через 5 AI-агентов и генерирует готовый HTML/React сайт на основе лучших практик рынка.</p>
+        </details>
+        <details>
+            <summary>Какие ИИ-модели используются?</summary>
+            <p>Локально: Ollama (llama3.2, mistral, qwen2.5, qwen2.5vl). Облачно: OpenRouter (Claude, GPT-4o, Gemini, Qwen3) — включая бесплатные модели.</p>
+        </details>
+        <details>
+            <summary>Как обойти Cloudflare?</summary>
+            <p>Используйте стратегию "Stealth" — Scrapling StealthyFetcher с Playwright обходит Cloudflare Turnstile автоматически.</p>
+        </details>
+    </section>
+</main>
+
+<footer>
+    <p>AI Scraping Stack &copy; 2026 — Платформа веб-разведки с ИИ | <a href="https://github.com/your-org/ai-scraping-stack">GitHub</a></p>
+</footer>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────
+// Change this to your backend URL. Leave empty if same domain.
+// Examples:
+//   ''                                    → same domain (Nginx proxy)
+//   'http://localhost:8100'               → local dev
+//   'https://your-api.railway.app'        → Railway
+//   'https://api.yourdomain.com'          → Timeweb
+const API_URL = '';
+
+// ── Helpers ──────────────────────────────────────────────────
+function resolveUrl(path) {
+    const base = API_URL || window.location.origin;
+    return base + (base.endsWith('/') ? '' : '/') + path.replace(/^\//, '');
+}
+
+async function api(path, body) {
+    const url = resolveUrl(path);
+    const opts = {
+        method: body ? 'POST' : 'GET',
+        headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+        let msg;
+        try {
+            const err = await r.json();
+            msg = err.detail || (Array.isArray(err.detail) ? err.detail[0]?.msg : null);
+        } catch { msg = null; }
+        throw new Error(msg || `HTTP ${r.status}: ${r.statusText}`);
+    }
+    return r.json();
+}
+
+function showLoading(id) {
+    document.getElementById(id).innerHTML = '<div class="loading">Загрузка</div>';
+}
+
+function showResult(id, data, title) {
+    const el = document.getElementById(id);
+    el.innerHTML = `
+        <div class="result">
+            <div class="result-header">
+                <span>${title || 'Результат'}</span>
+                <button class="btn btn-secondary" style="padding:0.3rem 0.8rem;font-size:0.8rem" onclick="this.closest('.result').remove()">Закрыть</button>
+            </div>
+            <div class="result-body"><pre>${esc(JSON.stringify(data, null, 2))}</pre></div>
+        </div>`;
+}
+
+function showScreenshot(id, b64, info) {
+    const el = document.getElementById(id);
+    el.innerHTML = `
+        <div class="result">
+            <div class="result-header"><span>Скриншот — ${esc(info.provider || '')} (${esc(info.elapsed_ms || 0)}ms)</span>
+                <button class="btn btn-secondary" style="padding:0.3rem 0.8rem;font-size:0.8rem" onclick="this.closest('.result').remove()">Закрыть</button></div>
+            <div class="result-body">
+                <img class="screenshot-preview" src="data:image/png;base64,${b64}" alt="Screenshot">
+                <pre>${esc(JSON.stringify(info, null, 2))}</pre>
+            </div>
+        </div>`;
+}
+
+function showError(id, msg) {
+    const friendly = getFriendlyError(msg);
+    document.getElementById(id).innerHTML = `<div class="result"><div class="result-body error">${esc(friendly)}</div></div>`;
+}
+
+function getFriendlyError(msg) {
+    if (!msg) return 'Произошла неизвестная ошибка';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        return 'Не удалось подключиться к серверу. Проверьте что API запущен и CORS настроен. Если бэкенд на другом домене — укажите API_URL в начале скрипта.';
+    }
+    if (msg.includes('401') || msg.includes('403')) {
+        return 'Доступ запрещён. Проверьте API ключи на сервере.';
+    }
+    if (msg.includes('429')) {
+        return 'Слишком много запросов. Подождите немного.';
+    }
+    if (msg.includes('500')) {
+        return 'Ошибка сервера. Попробуйте позже или проверьте логи бэкенда.';
+    }
+    return msg;
+}
+
+function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Tabs ─────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ── Status check ─────────────────────────────────────────────
+async function checkStatus() {
+    try {
+        const s = await api('/status');
+        document.getElementById('dotApi').classList.remove('off');
+        document.getElementById('dotOllama').classList.toggle('off', !s.ollama?.online);
+        document.getElementById('dotOr').classList.toggle('off', !s.openrouter?.configured);
+    } catch {
+        document.getElementById('dotApi').classList.add('off');
+        document.getElementById('dotOllama').classList.add('off');
+        document.getElementById('dotOr').classList.add('off');
+    }
+}
+checkStatus();
+setInterval(checkStatus, 30000);
+
+// ── Scrape ───────────────────────────────────────────────────
+async function doScrape() {
+    const urls = document.getElementById('scrapeUrl').value.trim().split('\n').map(u => u.trim()).filter(Boolean);
+    if (!urls.length) return showError('scrapeResult', 'Введите хотя бы один URL');
+
+    const strategy = document.getElementById('scrapeStrategy').value;
+    const task = document.getElementById('scrapeTask').value;
+    const complexity = document.getElementById('scrapeComplexity').value;
+
+    showLoading('scrapeResult');
+    try {
+        if (urls.length === 1) {
+            const r = await api('/scrape', { url: urls[0], strategy, task, complexity });
+            showResult('scrapeResult', r, `Scrape: ${urls[0]} — ${r.provider} — ${r.elapsed_ms}ms`);
+        } else {
+            const r = await api('/scrape/bulk', { urls, strategy, task, complexity, max_concurrent: 5 });
+            showResult('scrapeResult', r, `Bulk: ${r.success}/${r.total} успешно`);
+        }
+    } catch (e) { showError('scrapeResult', e.message); }
+}
+
+// ── Synthesize ───────────────────────────────────────────────
+async function doSynthesize() {
+    const urls = document.getElementById('synthUrls').value.trim().split('\n').map(u => u.trim()).filter(Boolean);
+    const prompt = document.getElementById('synthPrompt').value.trim();
+    if (!urls.length || !prompt) return showError('synthResult', 'Введите URL и описание сайта');
+
+    showLoading('synthResult');
+    try {
+        const r = await api('/synthesize', {
+            urls,
+            prompt,
+            output_format: document.getElementById('synthFormat').value,
+            research_trends: true,
+            complexity: document.getElementById('synthComplexity').value,
+        });
+        if (r.html || r.code) {
+            document.getElementById('synthResult').innerHTML = `
+                <div class="result">
+                    <div class="result-header">
+                        <span>Сайт сгенерирован — ${r.urls_processed} URL — ${r.elapsed_ms}ms</span>
+                        <div>
+                            <button class="btn btn-secondary" style="padding:0.3rem 0.8rem;font-size:0.8rem" onclick="downloadCode()">Скачать HTML</button>
+                            <button class="btn btn-secondary" style="padding:0.3rem 0.8rem;font-size:0.8rem" onclick="this.closest('.result').remove()">Закрыть</button>
+                        </div>
+                    </div>
+                    <div class="result-body"><pre>${esc(r.html || r.code)}</pre></div>
+                </div>`;
+            window._generatedCode = r.html || r.code;
+        } else {
+            showResult('synthResult', r, 'Синтез завершён');
+        }
+    } catch (e) { showError('synthResult', e.message); }
+}
+
+function downloadCode() {
+    if (!window._generatedCode) return;
+    const blob = new Blob([window._generatedCode], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'generated-site.html';
+    a.click();
+}
+
+// ── Screenshot ───────────────────────────────────────────────
+async function doScreenshot() {
+    const url = document.getElementById('shotUrl').value.trim();
+    if (!url) return showError('shotResult', 'Введите URL');
+    showLoading('shotResult');
+    try {
+        const r = await api('/screenshot', {
+            url,
+            width: parseInt(document.getElementById('shotWidth').value),
+            full_page: document.getElementById('shotFullPage').checked,
+            pdf: document.getElementById('shotPdf').checked,
+        });
+        showScreenshot('shotResult', r.screenshot_b64, {
+            provider: r.provider,
+            elapsed_ms: r.elapsed_ms,
+            width: r.width,
+            height: r.height,
+        });
+    } catch (e) { showError('shotResult', e.message); }
+}
+
+// ── Audit ────────────────────────────────────────────────────
+async function doAudit() {
+    const url = document.getElementById('auditUrl').value.trim();
+    if (!url) return showError('auditResult', 'Введите URL');
+    const tasks = Array.from(document.getElementById('auditTasks').selectedOptions).map(o => o.value);
+    showLoading('auditResult');
+    try {
+        const r = await api('/screenshot/audit', {
+            url,
+            max_pages: parseInt(document.getElementById('auditPages').value),
+            tasks: tasks.length ? tasks : ['business_intel', 'design_audit'],
+            save_screenshots: false,
+        });
+        showResult('auditResult', r, `Аудит: ${r.pages_analyzed?.length || 0} страниц`);
+    } catch (e) { showError('auditResult', e.message); }
+}
+
+// ── Vision ───────────────────────────────────────────────────
+async function doVision() {
+    const b64 = document.getElementById('visionB64').value.trim();
+    if (!b64) return showError('visionResult', 'Вставьте base64 скриншота');
+    showLoading('visionResult');
+    try {
+        const r = await api('/vision/analyze', {
+            screenshot_b64: b64,
+            task: document.getElementById('visionTask').value,
+            custom_prompt: document.getElementById('visionPrompt').value,
+        });
+        showResult('visionResult', r, `Vision: ${r.task} — ${r.model_used} — ${r.elapsed_ms}ms`);
+    } catch (e) { showError('visionResult', e.message); }
+}
+</script>
+
+</body>
+</html>
