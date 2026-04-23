@@ -4,7 +4,7 @@ tests/test_storage.py — Storage layer tests (SQLite + JSON)
 import pytest
 from pathlib import Path
 from src.storage import Storage
-from src.models import ScrapeResult
+from providers import ScrapeResult
 
 
 @pytest.fixture

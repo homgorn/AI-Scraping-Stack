@@ -252,6 +252,7 @@ class TestProviderRouter:
         router.scraperapi.scrape = AsyncMock(return_value=error_result)
 
         result = await router.scrape("https://x.com", strategy="smart", fallback=True)
+        assert router.jina.scrape.call_count >= 1
         router._scrapling_fast.assert_called_once()
 
     @pytest.mark.asyncio
@@ -259,7 +260,7 @@ class TestProviderRouter:
         error = ScrapeResult(url="x", error="fail", provider="jina_reader")
         router.jina.scrape = AsyncMock(return_value=error)
         result = await router.scrape("https://x.com", strategy="free", fallback=False)
-        router.jina.scrape.assert_called_once()
+        assert router.jina.scrape.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_all_fail_returns_error_result(self, router):

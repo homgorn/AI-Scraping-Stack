@@ -13,13 +13,16 @@ Usage:
     result = await llm.analyze("text", task="summarize", complexity="low")
 """
 
+import logging
 import time
-from typing import Literal, Optional
+from typing import AsyncIterator, Literal, Optional
 
 import httpx
 
 from src.config import Settings
 from src.models import AnalyzeResponse
+
+logger = logging.getLogger(__name__)
 
 # ── Task prompts ──────────────────────────────────────────────────────────────
 
@@ -64,10 +67,11 @@ class LLMRouter:
         # Auto routing
         if complexity == "low":
             result = await self._call_ollama(prompt, model_override, start)
-            if result.error and self.cfg.openrouter_api_key:
-                return await self._call_openrouter(
-                    prompt, "medium", model_override, start
-                )
+            if not result.analysis or result.error:
+                if self.cfg.openrouter_api_key:
+                    return await self._call_openrouter(
+                        prompt, "medium", model_override, start
+                    )
             return result
 
         return await self._call_openrouter(prompt, complexity, model_override, start)
@@ -178,7 +182,8 @@ class LLMRouter:
                 r = await c.get(f"{self.cfg.ollama_host}/api/tags")
                 r.raise_for_status()
                 return [m["name"] for m in r.json().get("models", [])]
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to list Ollama models: {e}")
             return []
 
     async def pull_ollama_model(self, model_name: str) -> AsyncIterator[str]:

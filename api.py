@@ -1,6 +1,6 @@
 """
 FastAPI Backend — AI Scraping Stack (Unified)
-==============================================
+=============================================
 Run: uvicorn api:app --reload --port 8100
 
 All routes:
@@ -33,7 +33,9 @@ All routes:
 
 import asyncio
 import json
+import logging
 import os
+import secrets
 import time
 from datetime import datetime
 from typing import Any, AsyncGenerator, Literal, Optional
@@ -44,17 +46,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
+
 # ── Security Config ───────────────────────────────────────────────────────────
-API_KEY = os.getenv("API_KEY", "")  # If set, all POST requests require this key
-RATE_LIMIT = 10  # Max requests per minute per IP
+API_KEY = os.getenv("API_KEY", "")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+RATE_LIMIT = int(os.getenv("RATE_LIMIT", "10"))
 _rate_limit_store: dict[str, list[float]] = {}
 
 
 async def security_middleware(request: Request, call_next):
     """Rate limiting + API Key protection."""
-    # Skip for GET/HEAD/OPTIONS
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+
+    if client_ip not in _rate_limit_store:
+        _rate_limit_store[client_ip] = []
+    _rate_limit_store[client_ip] = [t for t in _rate_limit_store[client_ip] if now - t < 60]
+    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT:
+        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(429, "Too many requests. Please wait a moment.")
+    _rate_limit_store[client_ip].append(now)
+
+    if API_KEY:
+        auth = request.headers.get("X-API-Key", "")
+        if not secrets.compare_digest(auth, API_KEY):
+            logger.warning(f"Invalid API key attempt from IP: {client_ip}")
+            raise HTTPException(403, "Forbidden: Invalid API Key")
+
+    return await call_next(request)
 
     client_ip = request.client.host if request.client else "unknown"
     now = time.time()
@@ -107,7 +130,8 @@ from src.storage import Storage
 app = FastAPI(title="AI Scraping Stack API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -251,8 +275,8 @@ async def _ollama_models() -> list[dict]:
                     }
                     for m in r.json().get("models", [])
                 ]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to fetch Ollama models: {e}")
     return []
 
 
@@ -345,13 +369,12 @@ async def update_config(update: ConfigUpdate):
 async def scrape_single(req: ScrapeRequest):
     svc = _scraper()
     result = await svc.scrape(req)
-    # Persist to history
     try:
         storage = _storage()
         await storage.init()
         await storage.save_result(result, task=req.task)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Failed to save scrape result to history: {e}")
     return result.model_dump()
 
 

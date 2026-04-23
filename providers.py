@@ -36,10 +36,19 @@ Strategy "smart":
 """
 
 import asyncio
+import logging
 import os
 from dataclasses import dataclass, field
-from typing import Literal, Optional
+from typing import Callable, Literal, Optional
+
 import httpx
+
+logger = logging.getLogger(__name__)
+
+RETRY_MAX = int(os.getenv("RETRY_MAX", "2"))
+RETRY_DELAY = float(os.getenv("RETRY_DELAY", "1.0"))
+CIRCUIT_FAILURE_THRESHOLD = 3
+CIRCUIT_RESET_TIMEOUT = 30.0
 
 
 # ── Unified result type ───────────────────────────────────────────────────────
@@ -428,6 +437,40 @@ class ZenRowsAdapter:
 
 
 # ── Smart Router ──────────────────────────────────────────────────────────────
+class CircuitBreaker:
+    """Simple circuit breaker for provider fallback."""
+
+    def __init__(self, failure_threshold: int = CIRCUIT_FAILURE_THRESHOLD,
+                 reset_timeout: float = CIRCUIT_RESET_TIMEOUT):
+        self.failure_threshold = failure_threshold
+        self.reset_timeout = reset_timeout
+        self.failures: dict[str, int] = {}
+        self.last_failure_time: dict[str, float] = {}
+        self._lock = asyncio.Lock()
+
+    async def record_failure(self, provider: str):
+        async with self._lock:
+            self.failures[provider] = self.failures.get(provider, 0) + 1
+            self.last_failure_time[provider] = asyncio.get_event_loop().time()
+
+    async def is_open(self, provider: str) -> bool:
+        async with self._lock:
+            if provider not in self.failures:
+                return False
+            if self.failures[provider] >= self.failure_threshold:
+                last_fail = self.last_failure_time.get(provider, 0)
+                now = asyncio.get_event_loop().time()
+                if now - last_fail > self.reset_timeout:
+                    self.failures[provider] = 0
+                    return False
+                return True
+            return False
+
+    async def record_success(self, provider: str):
+        async with self._lock:
+            self.failures[provider] = 0
+
+
 class ProviderRouter:
     """
     Умный роутер — выбирает провайдера по цене/скорости/сложности.
@@ -464,6 +507,52 @@ class ProviderRouter:
             ollama_model=cfg.get("ollama_model", "llama3.2")
         )
         self.zenrows = ZenRowsAdapter(cfg.get("zenrows_key", ""))
+        self._circuit = CircuitBreaker()
+        self._provider_names = {
+            "jina_reader": "jina",
+            "crawl4ai": "crawl4ai",
+            "scrapling_fast": "scrapling",
+            "scrapling_stealth": "scrapling",
+            "scraperapi": "scraperapi",
+            "scrapingdog": "scrapingdog",
+            "firecrawl": "firecrawl",
+            "scrapegraphai": "scrapegraph",
+            "zenrows": "zenrows",
+        }
+
+    async def _retry_with_backoff(
+        self,
+        fetch_fn: Callable,
+        provider_name: str,
+    ) -> ScrapeResult:
+        """Execute with retry and circuit breaker."""
+        last_error = None
+
+        for attempt in range(RETRY_MAX + 1):
+            if await self._circuit.is_open(provider_name):
+                logger.debug(f"Circuit open for {provider_name}, skipping")
+                return ScrapeResult(url="", provider=provider_name,
+                                   error=f"Circuit breaker open for {provider_name}")
+
+            try:
+                result = await fetch_fn()
+                if not result.error and (result.markdown or result.text or result.html):
+                    await self._circuit.record_success(provider_name)
+                    return result
+                last_error = result.error
+                if result.provider != "unknown" and attempt == RETRY_MAX:
+                    await self._circuit.record_failure(provider_name)
+                    logger.warning(f"Provider {result.provider} failed after all retries: {result.error}")
+            except Exception as e:
+                last_error = str(e)
+                if attempt == RETRY_MAX:
+                    await self._circuit.record_failure(provider_name)
+                    logger.warning(f"Provider {provider_name} exception after all retries: {e}")
+
+            if attempt < RETRY_MAX:
+                await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+
+        return ScrapeResult(url="", provider=provider_name, error=last_error or "Max retries exceeded")
 
     async def scrape(
         self,
@@ -481,13 +570,25 @@ class ProviderRouter:
         chain = self._build_chain(strategy, prompt, url, css_selector)
 
         for fetch_fn in chain:
-            result = await fetch_fn()
+            provider_key = self._extract_provider_key(fetch_fn)
+            result = await self._retry_with_backoff(fetch_fn, provider_key)
+
             if not result.error and (result.markdown or result.text or result.html):
                 return result
+
             if not fallback:
                 return result
 
         return ScrapeResult(url=url, error="All providers failed", provider="router")
+
+    def _extract_provider_key(self, fetch_fn: Callable) -> str:
+        """Extract provider key from lambda for circuit breaker."""
+        if hasattr(fetch_fn, "__name__"):
+            name = fetch_fn.__name__
+            if name.startswith("_scrapling"):
+                return "scrapling"
+            return name
+        return "unknown"
 
     def _build_chain(self, strategy, prompt, url, css_selector):
         """Returns list of async callables in priority order.
@@ -532,19 +633,19 @@ class ProviderRouter:
         try:
             from scrapling.fetchers import Fetcher
 
-            page = Fetcher().get(url)
-            text = page.get_all_text(ignore_tags=["script", "style"])
-            els = (
-                [e.text for e in page.css(css_selector, auto_save=True) if e.text][:50]
-                if css_selector
-                else []
-            )
-            t = page.css("title", first=True)
+            page = await asyncio.to_thread(Fetcher().get, url)
+            text = await asyncio.to_thread(page.get_all_text, ignore_tags=["script", "style"])
+            els = []
+            if css_selector:
+                elements = await asyncio.to_thread(page.css, css_selector, auto_save=True)
+                els = [e.text for e in elements if e.text][:50]
+            title_el = await asyncio.to_thread(page.css, "title", first=True)
+            title = title_el.text if title_el else ""
             return ScrapeResult(
                 url=url,
                 html=page.html,
                 text=text,
-                title=t.text if t else "",
+                title=title,
                 links=[],
                 provider="scrapling_fast",
                 cost_usd=0.0,
@@ -558,8 +659,8 @@ class ProviderRouter:
         try:
             from scrapling.fetchers import StealthyFetcher
 
-            page = StealthyFetcher.fetch(url, headless=True, network_idle=True)
-            text = page.get_all_text(ignore_tags=["script", "style"])
+            page = await asyncio.to_thread(StealthyFetcher.fetch, url, headless=True, network_idle=True)
+            text = await asyncio.to_thread(page.get_all_text, ignore_tags=["script", "style"])
             return ScrapeResult(
                 url=url,
                 html=page.html,
