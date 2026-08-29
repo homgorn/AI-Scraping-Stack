@@ -37,6 +37,7 @@ Strategy "smart":
 
 import asyncio
 import logging
+import time
 import os
 from dataclasses import dataclass, field
 from typing import Callable, Literal, Optional
@@ -451,7 +452,7 @@ class CircuitBreaker:
     async def record_failure(self, provider: str):
         async with self._lock:
             self.failures[provider] = self.failures.get(provider, 0) + 1
-            self.last_failure_time[provider] = asyncio.get_event_loop().time()
+            self.last_failure_time[provider] = time.monotonic()
 
     async def is_open(self, provider: str) -> bool:
         async with self._lock:
@@ -459,7 +460,8 @@ class CircuitBreaker:
                 return False
             if self.failures[provider] >= self.failure_threshold:
                 last_fail = self.last_failure_time.get(provider, 0)
-                now = asyncio.get_event_loop().time()
+                # Use monotonic clock to avoid issues if system clock jumps.
+                now = time.monotonic()
                 if now - last_fail > self.reset_timeout:
                     self.failures[provider] = 0
                     return False
