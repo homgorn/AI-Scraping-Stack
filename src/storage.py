@@ -12,8 +12,10 @@ Usage:
     history = await storage.get_history(limit=50)
 """
 
+import atexit
 import json
 import sqlite3
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -29,35 +31,55 @@ class Storage:
     def __init__(self, settings: Settings):
         self.cfg = settings
         self._conn: Optional[sqlite3.Connection] = None
+        self._lock = threading.Lock()
+        self._closed = False
 
     async def init(self):
-        """Initialize DB and create tables."""
-        Path(self.cfg.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.cfg.db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS scrape_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                url TEXT NOT NULL,
-                provider TEXT,
-                task TEXT,
-                model_used TEXT,
-                cost_usd REAL DEFAULT 0,
-                elapsed_ms INTEGER DEFAULT 0,
-                timestamp TEXT NOT NULL,
-                error TEXT,
-                markdown TEXT,
-                analysis TEXT
-            )
-        """)
-        self._conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_url ON scrape_history(url)
-        """)
-        self._conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_timestamp ON scrape_history(timestamp)
-        """)
-        self._conn.commit()
-        self._init_model_registry()
+        """Initialize DB and create tables.
+
+        Enables WAL journal mode for better concurrency (readers don't block
+        writers). Use IMMEDIATE transactions for write paths if we add them.
+        """
+        if self._closed:
+            raise RuntimeError("Storage is closed; create a new instance")
+        with self._lock:
+            if self._conn is not None:
+                return
+            Path(self.cfg.db_path).parent.mkdir(parents=True, exist_ok=True)
+            # check_same_thread=False is required because FastAPI dispatches
+            # to a thread pool. We still serialize writes via self._lock.
+            self._conn = sqlite3.connect(self.cfg.db_path, check_same_thread=False)
+            self._conn.row_factory = sqlite3.Row
+            # WAL allows concurrent reads while a write is in progress.
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            # Reasonable defaults: wait up to 5s for the writer lock before erroring.
+            self._conn.execute("PRAGMA busy_timeout=5000")
+            # Foreign keys off (we don't use them yet); keep on for future-proofing.
+            self._conn.execute("PRAGMA foreign_keys=ON")
+            self._conn.execute("""
+                CREATE TABLE IF NOT EXISTS scrape_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL,
+                    provider TEXT,
+                    task TEXT,
+                    model_used TEXT,
+                    cost_usd REAL DEFAULT 0,
+                    elapsed_ms INTEGER DEFAULT 0,
+                    timestamp TEXT NOT NULL,
+                    error TEXT,
+                    markdown TEXT,
+                    analysis TEXT
+                )
+            """)
+            self._conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_url ON scrape_history(url)
+            """)
+            self._conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_timestamp ON scrape_history(timestamp)
+            """)
+            self._conn.commit()
+            self._init_model_registry()
+        atexit.register(self.close)
 
     def _init_model_registry(self):
         """Initialize JSON model registry."""
@@ -77,26 +99,29 @@ class Storage:
 
     async def save_result(self, result: ScrapeResponse, task: str = ""):
         """Save a scrape result to history."""
+        if self._closed:
+            raise RuntimeError("Storage is closed; create a new instance")
         if self._conn is None:
             await self.init()
-        self._conn.execute(
-            """INSERT INTO scrape_history
-               (url, provider, task, model_used, cost_usd, elapsed_ms, timestamp, error, markdown, analysis)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                result.url,
-                result.provider,
-                task,
-                result.model_used,
-                result.cost_usd,
-                result.elapsed_ms,
-                datetime.utcnow().isoformat(),
-                result.error,
-                result.markdown[:10000] if result.markdown else "",
-                result.analysis[:5000] if result.analysis else "",
-            ),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                """INSERT INTO scrape_history
+                   (url, provider, task, model_used, cost_usd, elapsed_ms, timestamp, error, markdown, analysis)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    result.url,
+                    result.provider,
+                    task,
+                    result.model_used,
+                    result.cost_usd,
+                    result.elapsed_ms,
+                    datetime.utcnow().isoformat(),
+                    result.error,
+                    result.markdown[:10000] if result.markdown else "",
+                    result.analysis[:5000] if result.analysis else "",
+                ),
+            )
+            self._conn.commit()
 
     async def get_history(
         self,
@@ -219,3 +244,15 @@ class Storage:
         reg = self.load_model_registry()
         reg["config_overrides"][key] = value
         self.save_model_registry(reg)
+
+    def close(self):
+        """Close the SQLite connection. Idempotent; safe to call from atexit."""
+        with self._lock:
+            if self._conn is not None and not self._closed:
+                try:
+                    self._conn.close()
+                except Exception as e:  # pragma: no cover - defensive
+                    logger = __import__("logging").getLogger(__name__)
+                    logger.warning("Error closing SQLite connection: %s", e)
+                self._conn = None
+                self._closed = True

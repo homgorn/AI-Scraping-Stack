@@ -50,51 +50,40 @@ logger = logging.getLogger(__name__)
 
 # ── Security Config ───────────────────────────────────────────────────────────
 API_KEY = os.getenv("API_KEY", "")
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", "10"))
+RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 _rate_limit_store: dict[str, list[float]] = {}
 
 
 async def security_middleware(request: Request, call_next):
-    """Rate limiting + API Key protection."""
+    """Rate limiting + API Key protection.
+
+    Rate limit: sliding window of RATE_LIMIT requests per RATE_LIMIT_WINDOW seconds
+    per client IP. API key check: only enforced when API_KEY env is set.
+    API key comparison is timing-safe (secrets.compare_digest).
+    """
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return await call_next(request)
 
     client_ip = request.client.host if request.client else "unknown"
-    now = time.time()
+    now = time.monotonic()
 
-    if client_ip not in _rate_limit_store:
-        _rate_limit_store[client_ip] = []
-    _rate_limit_store[client_ip] = [t for t in _rate_limit_store[client_ip] if now - t < 60]
-    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT:
-        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+    bucket = _rate_limit_store.setdefault(client_ip, [])
+    # Drop entries outside the sliding window
+    while bucket and now - bucket[0] >= RATE_LIMIT_WINDOW:
+        bucket.pop(0)
+    if len(bucket) >= RATE_LIMIT:
+        logger.warning("Rate limit exceeded for IP: %s", client_ip)
         raise HTTPException(429, "Too many requests. Please wait a moment.")
-    _rate_limit_store[client_ip].append(now)
+    bucket.append(now)
 
     if API_KEY:
         auth = request.headers.get("X-API-Key", "")
-        if not secrets.compare_digest(auth, API_KEY):
-            logger.warning(f"Invalid API key attempt from IP: {client_ip}")
-            raise HTTPException(403, "Forbidden: Invalid API Key")
-
-    return await call_next(request)
-
-    client_ip = request.client.host if request.client else "unknown"
-    now = time.time()
-
-    # 1. Rate Limiting
-    if client_ip not in _rate_limit_store:
-        _rate_limit_store[client_ip] = []
-    # Remove old entries
-    _rate_limit_store[client_ip] = [t for t in _rate_limit_store[client_ip] if now - t < 60]
-    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT:
-        raise HTTPException(429, "Too many requests. Please wait a moment.")
-    _rate_limit_store[client_ip].append(now)
-
-    # 2. API Key Check (only if API_KEY env var is set)
-    if API_KEY:
-        auth = request.headers.get("X-API-Key", "")
-        if auth != API_KEY:
+        # Timing-safe comparison; compare_digest requires bytes or str of equal length.
+        # If lengths differ, return False without leaking length via short-circuit.
+        if not auth or not secrets.compare_digest(auth, API_KEY):
+            logger.warning("Invalid API key attempt from IP: %s", client_ip)
             raise HTTPException(403, "Forbidden: Invalid API Key")
 
     return await call_next(request)
@@ -128,13 +117,18 @@ from src.storage import Storage
 # ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="AI Scraping Stack API", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS: when ALLOWED_ORIGINS is empty, only same-origin requests are allowed.
+# credentials=True is only legal when origins are explicit (not "*"), so we
+# disable it in the empty/default case. Set ALLOWED_ORIGINS=https://a.com,https://b.com
+# to enable cross-origin requests with cookies.
+_cors_kwargs: dict = {
+    "allow_origins": ALLOWED_ORIGINS or [],
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if ALLOWED_ORIGINS:
+    _cors_kwargs["allow_credentials"] = True
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
 app.middleware("http")(security_middleware)
 
 # ── Service factories (lazy init) ─────────────────────────────────────────────

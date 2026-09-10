@@ -60,9 +60,15 @@ class Settings(BaseSettings):
     # ── LLM ───────────────────────────────────────────────────────────────
     llm_max_tokens: int = 4096
     llm_temperature: float = 0.3
+    llm_top_p: float = 1.0
+    # Seed for reproducibility. 0 = disable (OpenAI-compatible); 42 = default.
+    llm_seed: int = 42
 
     # ── Server ────────────────────────────────────────────────────────────
-    host: str = "0.0.0.0"
+    # Default to localhost only. Set HOST=0.0.0.0 to expose on all interfaces
+    # (typical for Docker/Render/Railway deployments). Never default to 0.0.0.0 —
+    # a forgotten API_KEY would leak the service to the world.
+    host: str = "127.0.0.1"
     port: int = 8100
     max_concurrent: int = 5
 
